@@ -367,14 +367,22 @@ class DirectoryMerger(DefaultMerger):
                     continue
                 merger.finish(this_key_name)
 
+def safe_root_open(path):
+    f = R.TFile.Open(path)
+    assert f.IsOpen() and not f.IsZombie()
+    return f
+
 def try_tarfile(filename, pattern):
     with closing(tarfile_open(filename)) as tar:
         for f in tar.getmembers():
-            if ".root" in f.path and (not pattern or pattern in f.path):
-                print " -", f.path
-                tmpdir = mkdtemp()
+            if not (".root" in f.path and (not pattern or pattern in f.path)):
+                continue 
+            print " -", f.path
+            tmpdir = mkdtemp()
+            try:
                 tar.extract(f.path, tmpdir)
-                yield R.TFile(tmpdir + "/" + f.path)
+                yield safe_root_open(tmpdir + "/" + f.path)
+            finally:
                 rmtree(tmpdir)
 
 def root_file_generator(filenames, pattern, fs=False, fs_protocol='rfio'):
@@ -387,7 +395,7 @@ def root_file_generator(filenames, pattern, fs=False, fs_protocol='rfio'):
                 for f in try_tarfile(filename, pattern):
                     yield f
             else:
-                yield R.TFile.Open(filename)
+                yield safe_root_open(filename)
 def init_file_stager(fs_protocol='rfio'):
 
     ## Try to load FileStager library
