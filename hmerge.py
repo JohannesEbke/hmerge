@@ -1,8 +1,6 @@
 #! /usr/bin/env python
 
-from IPython.Shell import IPShellEmbed; ip = IPShellEmbed(["-pdb"])
-
-
+#from IPython.Shell import IPShellEmbed; ip = IPShellEmbed(["-pdb"])
 from collections import namedtuple
 from contextlib import contextmanager, closing
 from cPickle import dumps, loads, UnpicklingError
@@ -412,7 +410,7 @@ def init_file_stager(fs_protocol='rfio'):
     mgr = TStageManager.instance()
     mgr.setInfilePrefix('gridcopy://')
     mgr.setOutfilePrefix('file:')
-    mgr.setCpCommand('%s/fs_copy' % this_directory )
+    mgr.setCpCommand('%s/fs_copy' % dirname(abspath(__file__)) )
     mgr.addCpArg('-v')
     mgr.addCpArg('--vo')
     mgr.addCpArg('atlas')
@@ -480,8 +478,8 @@ def main():
         parser.print_help()
         parser.error("file stager protocole %s not supported" % options.fs_protocol)
 
-    if options.fs and not file_stager_available:
-        parser.error("file stager library could not be loaded!")
+    #if options.fs and not file_stager_available:
+    #    parser.error("file stager library could not be loaded!")
     
     TreeMerger.key = options.key
     TreeMerger.selection = options.selection
