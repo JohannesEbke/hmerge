@@ -1,8 +1,6 @@
 #! /usr/bin/env python
 
-from IPython.Shell import IPShellEmbed; ip = IPShellEmbed(["-pdb"])
-
-
+#from IPython.Shell import IPShellEmbed; ip = IPShellEmbed(["-pdb"])
 from collections import namedtuple
 from contextlib import contextmanager, closing
 from cPickle import dumps, loads, UnpicklingError
@@ -367,14 +365,22 @@ class DirectoryMerger(DefaultMerger):
                     continue
                 merger.finish(this_key_name)
 
+def safe_root_open(path):
+    f = R.TFile.Open(path)
+    assert f.IsOpen() and not f.IsZombie()
+    return f
+
 def try_tarfile(filename, pattern):
     with closing(tarfile_open(filename)) as tar:
         for f in tar.getmembers():
-            if ".root" in f.path and (not pattern or pattern in f.path):
-                print " -", f.path
-                tmpdir = mkdtemp()
+            if not (".root" in f.path and (not pattern or pattern in f.path)):
+                continue 
+            print " -", f.path
+            tmpdir = mkdtemp()
+            try:
                 tar.extract(f.path, tmpdir)
-                yield R.TFile(tmpdir + "/" + f.path)
+                yield safe_root_open(tmpdir + "/" + f.path)
+            finally:
                 rmtree(tmpdir)
 
 def root_file_generator(filenames, pattern, fs=False, fs_protocol='rfio'):
@@ -387,7 +393,7 @@ def root_file_generator(filenames, pattern, fs=False, fs_protocol='rfio'):
                 for f in try_tarfile(filename, pattern):
                     yield f
             else:
-                yield R.TFile.Open(filename)
+                yield safe_root_open(filename)
 def init_file_stager(fs_protocol='rfio'):
 
     ## Try to load FileStager library
@@ -404,7 +410,7 @@ def init_file_stager(fs_protocol='rfio'):
     mgr = TStageManager.instance()
     mgr.setInfilePrefix('gridcopy://')
     mgr.setOutfilePrefix('file:')
-    mgr.setCpCommand('%s/fs_copy' % this_directory )
+    mgr.setCpCommand('%s/fs_copy' % dirname(abspath(__file__)) )
     mgr.addCpArg('-v')
     mgr.addCpArg('--vo')
     mgr.addCpArg('atlas')
@@ -472,8 +478,8 @@ def main():
         parser.print_help()
         parser.error("file stager protocole %s not supported" % options.fs_protocol)
 
-    if options.fs and not file_stager_available:
-        parser.error("file stager library could not be loaded!")
+    #if options.fs and not file_stager_available:
+    #    parser.error("file stager library could not be loaded!")
     
     TreeMerger.key = options.key
     TreeMerger.selection = options.selection
